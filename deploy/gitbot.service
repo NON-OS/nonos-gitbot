@@ -1,0 +1,39 @@
+[Unit]
+Description=NONOS git to Telegram notifier
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gitbot
+WorkingDirectory=/opt/nonos-gitbot
+ExecStart=/opt/nonos-gitbot/.venv/bin/python -m gitbot
+Restart=always
+RestartSec=5
+
+# Secrets are handed in by systemd and read from $CREDENTIALS_DIRECTORY,
+# never from the environment or a file in the tree.
+LoadCredential=BOT_TOKEN:/etc/nonos-gitbot/bot_token
+LoadCredential=WEBHOOK_SECRET:/etc/nonos-gitbot/webhook_secret
+
+# State lives in one directory owned by the service user.
+StateDirectory=nonos-gitbot
+Environment=STATE_FILE=/var/lib/nonos-gitbot/state.json
+
+# Sandbox: no new privileges, read-only system, no home, private tmp,
+# no capabilities, and only the socket families the bot needs.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+ReadWritePaths=/var/lib/nonos-gitbot
+
+[Install]
+WantedBy=multi-user.target
