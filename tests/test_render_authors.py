@@ -63,7 +63,7 @@ class ReleaseRender(unittest.TestCase):
         out = render.render_release(events.parse_release(fixtures.release()))
         self.assertIn("Release published", out)
         self.assertIn("NONOS 0.9.2", out)
-        self.assertIn("1 asset", out)
+        self.assertIn("nonos.iso", out)
 
 
 class AuthorExtraction(unittest.TestCase):
@@ -81,3 +81,27 @@ class CaptionLimit(unittest.TestCase):
         out = fit_caption(long)
         self.assertLessEqual(len(out), CAPTION_LIMIT)
         self.assertTrue(out.endswith("…"))
+
+
+class RepoAndRelease(unittest.TestCase):
+    def test_render_repo_new(self):
+        from gitbot.events import parse_push
+        from gitbot.render import render_repo_new
+        from tests import fixtures
+        p = parse_push(fixtures.push(before=fixtures.ZERO))
+        out = render_repo_new(p)
+        self.assertIn("New repository", out)
+        self.assertIn("nonos-micro-kernel", out)
+        self.assertIn("eKisNonos", out)
+
+    def test_render_release_lists_files_and_checksums(self):
+        from gitbot.models import Release, Repo
+        from gitbot.render import render_release
+        repo = Repo("NON-OS/x", "https://git.nonos.software/NON-OS/x", "main", False)
+        rel = Release(repo, "published", "v1.0", "Version 1.0",
+                      "https://git.nonos.software/NON-OS/x/releases/tag/v1.0",
+                      assets=[("nonos.iso", 36700160), ("SHA256SUMS", 256)])
+        out = render_release(rel)
+        self.assertIn("nonos.iso", out)
+        self.assertIn("MB", out)
+        self.assertIn("SHA256SUMS", out)

@@ -1,10 +1,11 @@
 """Turn a verified webhook into Telegram work: decide, render, enqueue.
 
-Each event is posted as a banner with the message as its caption. A pull
-request is one message: it opens with the opened banner, then its image and
-caption are swapped together as it merges or closes, so the group sees one
-line that changes state rather than a stream of near-duplicates. Dedup
-already happened in the webhook layer.
+Commit pushes are held briefly and coalesced per branch by the batcher, so a
+burst becomes one message. A new repository is announced once. Pull requests
+and releases post immediately, and a pull request stays one message whose
+banner and caption change together as it opens, merges or closes. An event
+whose banner is not present yet falls back to a plain text message rather
+than failing.
 """
 from __future__ import annotations
 
@@ -12,6 +13,7 @@ import logging
 
 from . import banners, events, filters, models, render
 from .authors import SyncSummary
+from .batcher import CommitBatcher, merge
 from .config import Config
 from .state import State
 from .telegram import Telegram
@@ -25,6 +27,7 @@ class Handler:
         self.tg = tg
         self.state = state
         self.summary = summary
+        self.batcher = CommitBatcher(cfg.batch_seconds, self._flush_commits)
 
     def dispatch(self, event_type: str, payload: dict) -> None:
         if event_type == "push":
@@ -36,29 +39,33 @@ class Handler:
         else:
             log.debug("dropping event type %s", event_type)
 
-    def _banner(self, name: str):
-        return banners.path(self.cfg.media_dir, name)
+    def _post_banner(self, banner_name: str, text: str) -> None:
+        """Enqueue a photo post, or a plain message if the banner is missing."""
+        banner = banners.path(self.cfg.media_dir, banner_name)
+        if banner.is_file():
+            self.tg.enqueue(lambda: self.tg.send_photo(banner, text))
+        else:
+            log.info("banner %s not present, posting as text", banner_name)
+            self.tg.enqueue(lambda: self.tg.send_text(text))
 
     def _push(self, push: models.Push) -> None:
         decision, reason = filters.decide_push(push)
         log.info("push %s %s: %s (%s)", push.repo.full_name, push.branch, decision, reason)
-        if decision != filters.POST:
+        if decision == filters.SKIP:
             return
-        text = render.render_push(push, self.cfg.max_commits, self.cfg.summary_chars)
-
-        # A tag has no banner of its own, so it goes as a plain message.
+        if decision == filters.REPO:
+            self._post_banner(banners.REPO_NEW, render.render_repo_new(push))
+            return
         if push.is_tag:
-            async def tag_job() -> None:
-                await self.tg.send_text(text)
-            self.tg.enqueue(tag_job)
+            text = render.render_push(push, self.cfg.max_commits, self.cfg.summary_chars)
+            self.tg.enqueue(lambda: self.tg.send_text(text))
             return
+        self.batcher.add(push)
 
-        banner = self._banner(banners.COMMITS)
-
-        async def job() -> None:
-            await self.tg.send_photo(banner, text)
-
-        self.tg.enqueue(job)
+    def _flush_commits(self, pushes: list[models.Push]) -> None:
+        merged = merge(pushes)
+        text = render.render_push(merged, self.cfg.max_commits, self.cfg.summary_chars)
+        self._post_banner(banners.COMMITS, text)
 
     def _pull_request(self, pr: models.PullRequest) -> None:
         decision, reason = filters.decide_pull_request(pr, self.cfg.skip_drafts)
@@ -69,7 +76,7 @@ class Handler:
         async def job() -> None:
             author = await self.summary.author_for(pr)
             text = render.render_pull_request(pr, author)
-            banner = self._banner(banners.for_pull_request(pr))
+            banner = banners.path(self.cfg.media_dir, banners.for_pull_request(pr))
             existing = self.state.pr_message(pr.repo.full_name, pr.number)
             if existing:
                 await self.tg.edit_media(existing, banner, text)
@@ -87,10 +94,4 @@ class Handler:
         log.info("release %s %s: %s (%s)", release.repo.full_name, release.tag_name, decision, reason)
         if decision != filters.POST:
             return
-        text = render.render_release(release)
-        banner = self._banner(banners.RELEASE)
-
-        async def job() -> None:
-            await self.tg.send_photo(banner, text)
-
-        self.tg.enqueue(job)
+        self._post_banner(banners.RELEASE, render.render_release(release))

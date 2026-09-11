@@ -46,6 +46,8 @@ cp .env.example .env
 | `MAX_COMMITS` | no | `5` | commits shown before "and N more" |
 | `SUMMARY_CHARS` | no | `90` | commit subject trim length |
 | `SKIP_DRAFTS` | no | `1` | skip pull requests titled WIP until marked ready |
+| `BATCH_SECONDS` | no | `60` | coalesce commit pushes per branch for this many seconds, 0 for immediate |
+| `ADMIN_CHAT_ID` | no | `0` | private chat for failure alerts, 0 disables |
 | `LOG_LEVEL` | no | `INFO` | DEBUG, INFO, WARNING or ERROR |
 
 Every value is validated at start. A malformed token, a non-numeric chat id

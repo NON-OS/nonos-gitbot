@@ -7,10 +7,13 @@ from pathlib import Path
 from .models import PullRequest
 
 COMMITS = "banner-commits.png"
+REPO_NEW = "banner-repo-new.png"
 PR_OPENED = "banner-pr-opened.png"
 PR_MERGED = "banner-pr-merged.png"
 PR_CLOSED = "banner-pr-closed.png"
+PR_APPROVED = "banner-pr-approved.png"
 RELEASE = "banner-release.png"
+DIGEST = "banner-digest.png"
 
 
 def path(media_dir: Path, name: str) -> Path:

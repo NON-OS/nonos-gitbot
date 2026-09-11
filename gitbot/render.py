@@ -52,6 +52,14 @@ def render_push(push: Push, max_commits: int, summary_chars: int) -> str:
     return "\n".join(lines)
 
 
+def render_repo_new(push: Push) -> str:
+    n = push.total_commits or len(push.commits)
+    plural = "commit" if n == 1 else "commits"
+    head = f"<b>New repository</b> · {_esc(push.repo.full_name)}"
+    meta = f"{n} {plural} by {_esc(_author_label(push.commits))} on {_esc(push.branch)}"
+    return f"{head}\n{meta}\n<a href=\"{push.repo.html_url}\">{_esc(push.repo.html_url)}</a>"
+
+
 def _pr_headline(pr: PullRequest) -> str:
     if pr.action == "closed" and pr.merged:
         verb = "merged"
@@ -75,11 +83,27 @@ def render_pull_request(pr: PullRequest, author: str) -> str:
     return f"{head}\n{title}\n{meta}\n<a href=\"{pr.url}\">{_esc(pr.url)}</a>"
 
 
-def render_release(release: Release) -> str:
+def _fmt_size(n: int) -> str:
+    size = float(n)
+    for unit in ("B", "KB", "MB", "GB"):
+        if size < 1024 or unit == "GB":
+            return f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}"
+        size /= 1024
+    return f"{size:.1f} GB"
+
+
+def render_release(release: Release, max_files: int = 8) -> str:
     name = release.name or release.tag_name
     head = f"<b>Release published</b> · {_esc(release.repo.full_name)}"
-    lines = [head, _esc(name)]
-    if release.assets:
-        lines.append(f"{len(release.assets)} asset" + ("" if len(release.assets) == 1 else "s"))
+    lines = [head, _esc(name), ""]
+    checksums = next((a for a in release.assets if a[0].upper().startswith("SHA256")), None)
+    files = [a for a in release.assets if a is not checksums]
+    for fname, size in files[:max_files]:
+        lines.append(f"· {_esc(fname)} <i>({_fmt_size(size)})</i>")
+    hidden = len(files) - min(len(files), max_files)
+    if hidden > 0:
+        lines.append(f"· and {hidden} more")
+    if checksums:
+        lines.append(f"<a href=\"{release.url}\">🔒 {_esc(checksums[0])}</a>")
     lines.append(f"<a href=\"{release.url}\">{_esc(release.url)}</a>")
     return "\n".join(lines)

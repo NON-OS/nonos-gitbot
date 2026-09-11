@@ -30,8 +30,15 @@ class PushFilter(unittest.TestCase):
         self.assertEqual(filters.decide_push(feature)[0], filters.SKIP)
 
     def test_branch_create_delete_skipped(self):
-        self.assertEqual(filters.decide_push(events.parse_push(fixtures.push(before=fixtures.ZERO)))[0], filters.SKIP)
+        new_feature = fixtures.push(before=fixtures.ZERO, ref="refs/heads/feature-x")
+        self.assertEqual(filters.decide_push(events.parse_push(new_feature))[0], filters.SKIP)
         self.assertEqual(filters.decide_push(events.parse_push(fixtures.push(after=fixtures.ZERO)))[0], filters.SKIP)
+
+    def test_new_default_branch_with_commits_is_repo(self):
+        first_push = fixtures.push(before=fixtures.ZERO)  # default branch, has commits
+        self.assertEqual(filters.decide_push(events.parse_push(first_push))[0], filters.REPO)
+        empty = fixtures.push(before=fixtures.ZERO, commits=[], total=0)
+        self.assertEqual(filters.decide_push(events.parse_push(empty))[0], filters.SKIP)
 
     def test_tag_posts(self):
         tag = events.parse_push(fixtures.push(ref="refs/tags/v0.9.2", commits=[]))

@@ -32,11 +32,13 @@ def verify(secret: bytes, raw_body: bytes, signature: str) -> bool:
 
 
 class Webhook:
-    def __init__(self, cfg: Config, handler: Handler, state: State):
+    def __init__(self, cfg: Config, handler: Handler, state: State, alerter=None):
         self.cfg = cfg
         self.handler = handler
         self.state = state
+        self.alerter = alerter
         self._secret = cfg.webhook_secret.encode()
+        self._sig_fails = 0
 
     async def handle(self, request: web.Request) -> web.Response:
         delivery = _header(request, "Delivery")
@@ -44,8 +46,12 @@ class Webhook:
         raw = await request.read()
 
         if not verify(self._secret, raw, _header(request, "Signature")):
-            log.warning("rejected delivery %s: bad signature", delivery or "?")
+            self._sig_fails += 1
+            log.warning("rejected delivery %s: bad signature (%d in a row)", delivery or "?", self._sig_fails)
+            if self.alerter and self._sig_fails >= 5:
+                await self.alerter.fault("webhook signatures failing", f"{self._sig_fails} bad signatures in a row")
             return web.Response(status=401)
+        self._sig_fails = 0
 
         if event not in ACCEPTED_EVENTS:
             return web.Response(status=202, text="ignored")
@@ -72,8 +78,8 @@ class Webhook:
         return web.Response(text="ok")
 
 
-def build_app(cfg: Config, handler: Handler, state: State) -> web.Application:
-    hook = Webhook(cfg, handler, state)
+def build_app(cfg: Config, handler: Handler, state: State, alerter=None) -> web.Application:
+    hook = Webhook(cfg, handler, state, alerter)
     app = web.Application()
     app.router.add_post(cfg.webhook_path, hook.handle)
     app.router.add_get("/healthz", hook.health)

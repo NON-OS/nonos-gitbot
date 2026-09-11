@@ -78,6 +78,7 @@ class WebhookTests(unittest.IsolatedAsyncioTestCase):
         self.cfg = Config(
             bot_token="1:x", webhook_secret=SECRET, chat_id=-100123,
             state_file=Path(self.dir.name) / "state.json",
+            batch_seconds=0,  # flush commit pushes immediately in tests
         )
         self.state = State()
         self.tg = FakeTelegram()
@@ -181,6 +182,15 @@ class WebhookTests(unittest.IsolatedAsyncioTestCase):
         await self.tg.run_jobs()
         self.assertEqual(len(self.tg.sent), 1)
         self.assertIn("Release published", self.tg.sent[0][1])
+
+    async def test_new_repository_announced_once(self):
+        first_push = fixtures.push(before=fixtures.ZERO)  # new default branch with commits
+        await self.hook.handle(make_request("push", first_push, delivery="new1"))
+        await self.tg.run_jobs()
+        # banner-repo-new.png is not shipped yet, so it falls back to text.
+        posted = self.tg.sent + self.tg.sent_text
+        self.assertEqual(len(posted), 1)
+        self.assertIn("New repository", posted[0][1])
 
 
 class VerifyUnit(unittest.TestCase):

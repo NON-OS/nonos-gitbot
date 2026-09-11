@@ -8,6 +8,7 @@ import signal
 import aiohttp
 from aiohttp import web
 
+from .alerts import Alerter
 from .authors import SyncSummary
 from .config import Config
 from .handler import Handler
@@ -36,9 +37,11 @@ async def run() -> None:
         me = await tg.me()
         log.info("bot @%s posting to chat %s%s", me.get("username"), cfg.chat_id,
                  f" thread {cfg.message_thread_id}" if cfg.message_thread_id else "")
+        alerter = Alerter(tg.send_to, cfg.admin_chat_id)
+        tg.alerter = alerter
         summary = SyncSummary(forge_session, cfg.forge_base)
         handler = Handler(cfg, tg, state, summary)
-        app = build_app(cfg, handler, state)
+        app = build_app(cfg, handler, state, alerter)
 
         runner = web.AppRunner(app, access_log=None)
         await runner.setup()
@@ -48,6 +51,7 @@ async def run() -> None:
         try:
             await stop.wait()
         finally:
+            handler.batcher.flush_all()
             await runner.cleanup()
             state.save(cfg.state_file)
             log.info("stopped")

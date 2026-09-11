@@ -60,6 +60,19 @@ def _env_int(name: str, default: int, lo: int, hi: int) -> int:
     return value
 
 
+def _env_float(name: str, default: float, lo: float, hi: float) -> float:
+    raw = _env(name)
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        raise ConfigError(f"{name} must be a number") from None
+    if not lo <= value <= hi:
+        raise ConfigError(f"{name} must be between {lo} and {hi}")
+    return value
+
+
 @dataclass
 class Config:
     bot_token: str
@@ -76,6 +89,8 @@ class Config:
     max_commits: int = 5
     summary_chars: int = 90
     skip_drafts: bool = True
+    batch_seconds: float = 60.0
+    admin_chat_id: int = 0
     log_level: str = "INFO"
 
     @classmethod
@@ -108,5 +123,7 @@ class Config:
             max_commits=_env_int("MAX_COMMITS", 5, 1, 50),
             summary_chars=_env_int("SUMMARY_CHARS", 90, 40, 400),
             skip_drafts=_env("SKIP_DRAFTS", "1") not in ("0", "false", "no"),
+            batch_seconds=_env_float("BATCH_SECONDS", 60.0, 0.0, 600.0),
+            admin_chat_id=_env_int("ADMIN_CHAT_ID", 0, -(2**63), 2**63 - 1),
             log_level=level,
         )

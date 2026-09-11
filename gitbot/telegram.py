@@ -50,6 +50,8 @@ class Telegram:
         self._worker: asyncio.Task | None = None
         self._last_send = 0.0
         self._file_ids: dict[str, str] = {}
+        self._fails = 0
+        self.alerter = None  # set by app, avoids a construction cycle
 
     async def __aenter__(self) -> Telegram:
         self._session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60))
@@ -126,6 +128,13 @@ class Telegram:
         result = await self._send("sendMessage", params=params)
         return int(result["message_id"])
 
+    async def send_to(self, chat_id: int, text: str) -> int:
+        # Plain text to an explicit chat, used for admin alerts. No parse_mode,
+        # so an exception string with angle brackets cannot break it.
+        params = {"chat_id": chat_id, "text": text, "link_preview_options": {"is_disabled": True}}
+        result = await self._send("sendMessage", params=params)
+        return int(result["message_id"])
+
     async def send_photo(self, photo: Path | str, caption: str) -> int:
         caption = fit_caption(caption)
         key = str(photo) if isinstance(photo, Path) else None
@@ -173,8 +182,12 @@ class Telegram:
             job = await self._queue.get()
             try:
                 await job()
+                self._fails = 0
             except TelegramError as exc:
                 log.error("telegram job failed: %s", exc)
+                self._fails += 1
+                if self.alerter and self._fails >= 3:
+                    await self.alerter.fault("telegram sends failing", str(exc))
             except Exception as exc:  # never let one job kill the worker
                 log.exception("job crashed: %s", exc)
             finally:

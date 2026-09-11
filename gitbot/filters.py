@@ -8,6 +8,7 @@ from .models import PullRequest, Push, Release
 POST = "post"
 EDIT = "edit"
 SKIP = "skip"
+REPO = "repo"
 
 # A pull request is one line in the group that changes state: it is posted
 # once when opened, then every later action edits that same message.
@@ -20,6 +21,9 @@ def decide_push(push: Push) -> tuple[str, str]:
         return SKIP, "private repository"
     if push.is_tag:
         return (POST, "tag created") if not push.is_deleted_branch else (SKIP, "tag deleted")
+    if (push.is_new_branch and not push.is_deleted_branch
+            and push.branch == push.repo.default_branch and (push.commits or push.total_commits)):
+        return REPO, "new repository"
     if push.is_new_branch or push.is_deleted_branch:
         return SKIP, "branch create or delete"
     if push.branch != push.repo.default_branch:
