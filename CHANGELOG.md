@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Read a merge commit as a merged pull request. A merge done on GitHub reaches
+  the forge as a push, not a pull_request event, so the merge is recognised
+  from the commit subject, confirmed against the forge API, and announced as a
+  merged PR that edits the existing message, instead of a generic "new commits
+  on main".
 - Announce a new repository once, when its first push creates the default
   branch with commits, instead of arriving silently.
 - Batch commit pushes per repository and branch for a short window

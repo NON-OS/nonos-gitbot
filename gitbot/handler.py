@@ -1,20 +1,23 @@
 """Turn a verified webhook into Telegram work: decide, render, enqueue.
 
 Commit pushes are held briefly and coalesced per branch by the batcher, so a
-burst becomes one message. A new repository is announced once. Pull requests
-and releases post immediately, and a pull request stays one message whose
-banner and caption change together as it opens, merges or closes. An event
-whose banner is not present yet falls back to a plain text message rather
-than failing.
+burst becomes one message. A new repository is announced once. A push that
+carries a merge commit is read as a merged pull request, not as generic
+commits, because merges done on GitHub reach the forge as a push rather than
+a pull_request event. Pull requests and releases post immediately, and a pull
+request stays one message whose banner and caption change together as it
+opens, merges or closes. An event whose banner is not present yet falls back
+to a plain text message rather than failing.
 """
 from __future__ import annotations
 
 import logging
 
-from . import banners, events, filters, models, render
+from . import banners, events, filters, merges, models, render
 from .authors import SyncSummary
 from .batcher import CommitBatcher, merge
 from .config import Config
+from .forge import ForgeClient, pull_from_json
 from .state import State
 from .telegram import Telegram
 
@@ -22,11 +25,12 @@ log = logging.getLogger("gitbot.handler")
 
 
 class Handler:
-    def __init__(self, cfg: Config, tg: Telegram, state: State, summary: SyncSummary):
+    def __init__(self, cfg: Config, tg: Telegram, state: State, summary: SyncSummary, forge: ForgeClient):
         self.cfg = cfg
         self.tg = tg
         self.state = state
         self.summary = summary
+        self.forge = forge
         self.batcher = CommitBatcher(cfg.batch_seconds, self._flush_commits)
 
     def dispatch(self, event_type: str, payload: dict) -> None:
@@ -39,9 +43,11 @@ class Handler:
         else:
             log.debug("dropping event type %s", event_type)
 
+    def _banner(self, name: str):
+        return banners.path(self.cfg.media_dir, name)
+
     def _post_banner(self, banner_name: str, text: str) -> None:
-        """Enqueue a photo post, or a plain message if the banner is missing."""
-        banner = banners.path(self.cfg.media_dir, banner_name)
+        banner = self._banner(banner_name)
         if banner.is_file():
             self.tg.enqueue(lambda: self.tg.send_photo(banner, text))
         else:
@@ -60,12 +66,50 @@ class Handler:
             text = render.render_push(push, self.cfg.max_commits, self.cfg.summary_chars)
             self.tg.enqueue(lambda: self.tg.send_text(text))
             return
+        pr_numbers = merges.pr_numbers(push.commits)
+        if pr_numbers:
+            self.tg.enqueue(lambda: self._handle_merge_push(push, pr_numbers))
+            return
         self.batcher.add(push)
 
     def _flush_commits(self, pushes: list[models.Push]) -> None:
         merged = merge(pushes)
         text = render.render_push(merged, self.cfg.max_commits, self.cfg.summary_chars)
         self._post_banner(banners.COMMITS, text)
+
+    async def _handle_merge_push(self, push: models.Push, pr_numbers: list[int]) -> None:
+        """A default-branch push that names pull requests: confirm each is
+        merged, announce it, and edit its message in place. If none turn out
+        to be merged, the references were incidental and it is a normal push."""
+        merged_any = False
+        for number in pr_numbers:
+            data = await self.forge.pull(push.repo.full_name, number)
+            if not data or not data.get("merged"):
+                continue
+            merged_any = True
+            await self._post_merged_pr(pull_from_json(data, push.repo))
+        if not merged_any:
+            text = render.render_push(push, self.cfg.max_commits, self.cfg.summary_chars)
+            banner = self._banner(banners.COMMITS)
+            if banner.is_file():
+                await self.tg.send_photo(banner, text)
+            else:
+                await self.tg.send_text(text)
+
+    async def _post_merged_pr(self, pr: models.PullRequest) -> None:
+        author = await self.summary.author_for(pr)
+        text = render.render_pull_request(pr, author)
+        banner = self._banner(banners.for_pull_request(pr))
+        existing = self.state.pr_message(pr.repo.full_name, pr.number)
+        if existing:
+            await self.tg.edit_media(existing, banner, text)
+            return
+        if banner.is_file():
+            message_id = await self.tg.send_photo(banner, text)
+        else:
+            message_id = await self.tg.send_text(text)
+        self.state.remember_pr(pr.repo.full_name, pr.number, message_id)
+        self.state.save(self.cfg.state_file)
 
     def _pull_request(self, pr: models.PullRequest) -> None:
         decision, reason = filters.decide_pull_request(pr, self.cfg.skip_drafts)
@@ -76,7 +120,7 @@ class Handler:
         async def job() -> None:
             author = await self.summary.author_for(pr)
             text = render.render_pull_request(pr, author)
-            banner = banners.path(self.cfg.media_dir, banners.for_pull_request(pr))
+            banner = self._banner(banners.for_pull_request(pr))
             existing = self.state.pr_message(pr.repo.full_name, pr.number)
             if existing:
                 await self.tg.edit_media(existing, banner, text)

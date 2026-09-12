@@ -48,6 +48,28 @@ class FakeSummary:
         return "eKisNonos"
 
 
+class FakeForge:
+    def __init__(self, pulls=None):
+        self.pulls = pulls or {}  # number -> forge PR json, or None
+
+    async def pull(self, repo_full_name, number):
+        return self.pulls.get(number)
+
+
+def merged_pr_json(number=12, title="A vault the wallet keeps", merged=True):
+    return {
+        "number": number,
+        "title": title,
+        "html_url": f"https://git.nonos.software/NON-OS/nonos-micro-kernel/pulls/{number}",
+        "state": "closed",
+        "merged": merged,
+        "base": {"ref": "main"},
+        "head": {"label": "eKisNonos/nonos-micro-kernel:gh-485"},
+        "body": "Opened on GitHub by eKisNonos as pull request 485.",
+        "user": {"login": "nonos-sync"},
+    }
+
+
 class FakeRequest:
     def __init__(self, headers, body):
         self.headers = headers
@@ -82,7 +104,8 @@ class WebhookTests(unittest.IsolatedAsyncioTestCase):
         )
         self.state = State()
         self.tg = FakeTelegram()
-        self.handler = Handler(self.cfg, self.tg, self.state, FakeSummary())
+        self.forge = FakeForge()
+        self.handler = Handler(self.cfg, self.tg, self.state, FakeSummary(), self.forge)
         self.hook = Webhook(self.cfg, self.handler, self.state)
 
     def tearDown(self):
@@ -182,6 +205,48 @@ class WebhookTests(unittest.IsolatedAsyncioTestCase):
         await self.tg.run_jobs()
         self.assertEqual(len(self.tg.sent), 1)
         self.assertIn("Release published", self.tg.sent[0][1])
+
+    async def test_merge_commit_push_reads_as_merged_pr(self):
+        self.forge.pulls = {12: merged_pr_json(12)}
+        push = fixtures.push(commits=[fixtures.commit("Merge pull request #12 from eKisNonos/vault")])
+        await self.hook.handle(make_request("push", push, delivery="merge12"))
+        await self.tg.run_jobs()
+        self.assertEqual(len(self.tg.sent), 1)
+        caption = self.tg.sent[0][1]
+        self.assertIn("Pull request merged", caption)
+        self.assertIn("#12", caption)
+        self.assertNotIn("commits by", caption)
+
+    async def test_merge_edits_existing_pr_message(self):
+        self.state.remember_pr("NON-OS/nonos-micro-kernel", 12, 777)
+        self.forge.pulls = {12: merged_pr_json(12)}
+        push = fixtures.push(commits=[fixtures.commit("Merge pull request #12 from eKisNonos/vault")])
+        await self.hook.handle(make_request("push", push, delivery="merge12b"))
+        await self.tg.run_jobs()
+        self.assertEqual(self.tg.sent, [])          # no new message
+        self.assertEqual(len(self.tg.edited), 1)    # edited in place
+        self.assertEqual(self.tg.edited[0][0], 777)
+        self.assertIn("merged", self.tg.edited[0][1].lower())
+
+    async def test_squash_reference_not_merged_falls_back_to_commits(self):
+        self.forge.pulls = {99: None}  # forge says: not a merged PR
+        push = fixtures.push(commits=[fixtures.commit("fix a thing (#99)")])
+        await self.hook.handle(make_request("push", push, delivery="ref99"))
+        await self.tg.run_jobs()
+        self.assertEqual(len(self.tg.sent), 1)
+        self.assertIn("commit by", self.tg.sent[0][1])
+        self.assertNotIn("Pull request merged", self.tg.sent[0][1])
+
+    async def test_two_merges_in_one_push_both_announced(self):
+        self.forge.pulls = {12: merged_pr_json(12), 13: merged_pr_json(13, title="Second")}
+        push = fixtures.push(commits=[
+            fixtures.commit("Merge pull request #12 from a/b"),
+            fixtures.commit("Merge pull request #13 from c/d"),
+        ])
+        await self.hook.handle(make_request("push", push, delivery="merge2"))
+        await self.tg.run_jobs()
+        self.assertEqual(len(self.tg.sent), 2)
+        self.assertTrue(all("Pull request merged" in c for _, c in self.tg.sent))
 
     async def test_new_repository_announced_once(self):
         first_push = fixtures.push(before=fixtures.ZERO)  # new default branch with commits

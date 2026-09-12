@@ -11,6 +11,7 @@ from aiohttp import web
 from .alerts import Alerter
 from .authors import SyncSummary
 from .config import Config
+from .forge import ForgeClient
 from .handler import Handler
 from .state import State
 from .telegram import Telegram
@@ -40,7 +41,8 @@ async def run() -> None:
         alerter = Alerter(tg.send_to, cfg.admin_chat_id)
         tg.alerter = alerter
         summary = SyncSummary(forge_session, cfg.forge_base)
-        handler = Handler(cfg, tg, state, summary)
+        forge = ForgeClient(forge_session, cfg.forge_base)
+        handler = Handler(cfg, tg, state, summary, forge)
         app = build_app(cfg, handler, state, alerter)
 
         runner = web.AppRunner(app, access_log=None)
