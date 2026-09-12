@@ -5,6 +5,7 @@ not as a pull_request webhook, so the merge has to be read out of the commit
 messages. A merge commit reads "Merge pull request #12 ...", a squash or
 rebase merge ends its subject with "(#12)".
 """
+
 from __future__ import annotations
 
 import re

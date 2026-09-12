@@ -1,4 +1,5 @@
 """Entry point: verify config, open Telegram, run the webhook server."""
+
 from __future__ import annotations
 
 import asyncio
@@ -33,11 +34,17 @@ async def run() -> None:
         except NotImplementedError:
             pass
 
-    async with Telegram(cfg.bot_token, cfg.chat_id, cfg.message_thread_id) as tg, \
-            aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15)) as forge_session:
+    async with (
+        Telegram(cfg.bot_token, cfg.chat_id, cfg.message_thread_id) as tg,
+        aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15)) as forge_session,
+    ):
         me = await tg.me()
-        log.info("bot @%s posting to chat %s%s", me.get("username"), cfg.chat_id,
-                 f" thread {cfg.message_thread_id}" if cfg.message_thread_id else "")
+        log.info(
+            "bot @%s posting to chat %s%s",
+            me.get("username"),
+            cfg.chat_id,
+            f" thread {cfg.message_thread_id}" if cfg.message_thread_id else "",
+        )
         alerter = Alerter(tg.send_to, cfg.admin_chat_id)
         tg.alerter = alerter
         summary = SyncSummary(forge_session, cfg.forge_base)

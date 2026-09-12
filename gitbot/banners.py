@@ -1,5 +1,6 @@
 """Which banner image goes with which event. The files live in the media
 directory and are rendered from nonos-next/tools/forge/banners/."""
+
 from __future__ import annotations
 
 from pathlib import Path

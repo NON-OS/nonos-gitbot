@@ -1,6 +1,7 @@
 """Parse Forgejo webhook payloads into the model objects. Only the fields the
 bot renders are pulled out; everything else in the payload is ignored. Field
 names match what Forgejo 16.x sends."""
+
 from __future__ import annotations
 
 from .models import Commit, PullRequest, Push, Release, Repo

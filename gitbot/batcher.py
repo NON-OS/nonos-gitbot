@@ -2,6 +2,7 @@
 one message. Several pushes to the same branch in quick succession become a
 single post instead of a burst. Pull requests and releases do not pass
 through here; they post immediately."""
+
 from __future__ import annotations
 
 import asyncio

@@ -52,10 +52,15 @@ class PushFilter(unittest.TestCase):
 
 class PullRequestFilter(unittest.TestCase):
     def test_actions(self):
-        for action, expect in [("opened", filters.POST), ("closed", filters.EDIT),
-                               ("reopened", filters.EDIT), ("synchronized", filters.EDIT),
-                               ("edited", filters.EDIT), ("labeled", filters.SKIP),
-                               ("review_requested", filters.SKIP)]:
+        for action, expect in [
+            ("opened", filters.POST),
+            ("closed", filters.EDIT),
+            ("reopened", filters.EDIT),
+            ("synchronized", filters.EDIT),
+            ("edited", filters.EDIT),
+            ("labeled", filters.SKIP),
+            ("review_requested", filters.SKIP),
+        ]:
             pr = events.parse_pull_request(fixtures.pull_request(action=action))
             self.assertEqual(filters.decide_pull_request(pr, skip_drafts=True)[0], expect, action)
 

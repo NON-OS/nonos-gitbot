@@ -1,5 +1,6 @@
 """The shapes the bot works with, decoded from a webhook payload. Pure data
 plus the small derived properties the renderer and filters ask for."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

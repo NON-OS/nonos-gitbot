@@ -75,6 +75,7 @@ class AuthorExtraction(unittest.TestCase):
 class CaptionLimit(unittest.TestCase):
     def test_fit_caption_trims_to_limit(self):
         from gitbot.telegram import CAPTION_LIMIT, fit_caption
+
         short = "hello"
         self.assertEqual(fit_caption(short), short)
         long = "x" * 2000
@@ -88,6 +89,7 @@ class RepoAndRelease(unittest.TestCase):
         from gitbot.events import parse_push
         from gitbot.render import render_repo_new
         from tests import fixtures
+
         p = parse_push(fixtures.push(before=fixtures.ZERO))
         out = render_repo_new(p)
         self.assertIn("New repository", out)
@@ -97,10 +99,16 @@ class RepoAndRelease(unittest.TestCase):
     def test_render_release_lists_files_and_checksums(self):
         from gitbot.models import Release, Repo
         from gitbot.render import render_release
+
         repo = Repo("NON-OS/x", "https://git.nonos.software/NON-OS/x", "main", False)
-        rel = Release(repo, "published", "v1.0", "Version 1.0",
-                      "https://git.nonos.software/NON-OS/x/releases/tag/v1.0",
-                      assets=[("nonos.iso", 36700160), ("SHA256SUMS", 256)])
+        rel = Release(
+            repo,
+            "published",
+            "v1.0",
+            "Version 1.0",
+            "https://git.nonos.software/NON-OS/x/releases/tag/v1.0",
+            assets=[("nonos.iso", 36700160), ("SHA256SUMS", 256)],
+        )
         out = render_release(rel)
         self.assertIn("nonos.iso", out)
         self.assertIn("MB", out)

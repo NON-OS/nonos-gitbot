@@ -5,6 +5,7 @@ the pusher and the PR opener here are almost always that account. The real
 author is named in the last line of the PR description, and as a fallback
 can be looked up by GitHub number in the forge's public sync summary.
 """
+
 from __future__ import annotations
 
 import logging
@@ -43,7 +44,7 @@ class SyncSummary:
             async with self._session.get(self._url, timeout=10) as resp:
                 data = await resp.json(content_type=None)
             table: dict[tuple[str, str], str] = {}
-            for item in ((data.get("pulls", {}) or {}).get("items", []) or []):
+            for item in (data.get("pulls", {}) or {}).get("items", []) or []:
                 repo = str(item.get("repo", ""))
                 number = str(item.get("number", ""))
                 by = str(item.get("by", ""))

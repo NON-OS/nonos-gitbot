@@ -1,5 +1,6 @@
 """Read pull request details from the forge's public API. Used to confirm a
 merge seen in a push and to fill in the title and author for its message."""
+
 from __future__ import annotations
 
 import logging

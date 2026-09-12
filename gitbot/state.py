@@ -1,6 +1,7 @@
 """Durable state: the ring of seen delivery ids for dedup, and the map from
 a pull request to the Telegram message posted for it so later updates edit
 in place. Written atomically at mode 600."""
+
 from __future__ import annotations
 
 import json

@@ -9,6 +9,7 @@ request stays one message whose banner and caption change together as it
 opens, merges or closes. An event whose banner is not present yet falls back
 to a plain text message rather than failing.
 """
+
 from __future__ import annotations
 
 import logging

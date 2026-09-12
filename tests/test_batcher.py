@@ -8,10 +8,10 @@ from tests import fixtures
 
 class MergeTests(unittest.TestCase):
     def test_combines_commits_and_range(self):
-        p1 = parse_push(fixtures.push(before="a" * 40, after="b" * 40,
-                                      commits=[fixtures.commit("one"), fixtures.commit("two")]))
-        p2 = parse_push(fixtures.push(before="b" * 40, after="c" * 40,
-                                      commits=[fixtures.commit("three")]))
+        p1 = parse_push(
+            fixtures.push(before="a" * 40, after="b" * 40, commits=[fixtures.commit("one"), fixtures.commit("two")])
+        )
+        p2 = parse_push(fixtures.push(before="b" * 40, after="c" * 40, commits=[fixtures.commit("three")]))
         m = merge([p1, p2])
         self.assertEqual(m.total_commits, 3)
         self.assertEqual([c.message for c in m.commits], ["one", "two", "three"])

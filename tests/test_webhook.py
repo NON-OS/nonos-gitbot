@@ -17,9 +17,9 @@ SECRET = "topsecret-value"
 class FakeTelegram:
     def __init__(self):
         self.jobs = []
-        self.sent = []          # photo messages: (message_id, caption)
-        self.sent_text = []     # plain messages (tags): (message_id, text)
-        self.edited = []        # edit_media: (message_id, caption)
+        self.sent = []  # photo messages: (message_id, caption)
+        self.sent_text = []  # plain messages (tags): (message_id, text)
+        self.edited = []  # edit_media: (message_id, caption)
         self._next = 100
 
     def enqueue(self, job):
@@ -98,7 +98,9 @@ class WebhookTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.dir = tempfile.TemporaryDirectory()
         self.cfg = Config(
-            bot_token="1:x", webhook_secret=SECRET, chat_id=-100123,
+            bot_token="1:x",
+            webhook_secret=SECRET,
+            chat_id=-100123,
             state_file=Path(self.dir.name) / "state.json",
             batch_seconds=0,  # flush commit pushes immediately in tests
         )
@@ -175,12 +177,16 @@ class WebhookTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(resp.status, 400)
 
     async def test_pr_open_then_merge_edits_same_message(self):
-        await self.hook.handle(make_request("pull_request", fixtures.pull_request(action="opened", number=12), delivery="o12"))
+        await self.hook.handle(
+            make_request("pull_request", fixtures.pull_request(action="opened", number=12), delivery="o12")
+        )
         await self.tg.run_jobs()
         self.assertEqual(len(self.tg.sent), 1)
         message_id = self.tg.sent[0][0]
 
-        await self.hook.handle(make_request("pull_request", fixtures.pull_request(action="closed", merged=True, number=12), delivery="m12"))
+        await self.hook.handle(
+            make_request("pull_request", fixtures.pull_request(action="closed", merged=True, number=12), delivery="m12")
+        )
         await self.tg.run_jobs()
         self.assertEqual(len(self.tg.sent), 1)
         self.assertEqual(len(self.tg.edited), 1)
@@ -188,7 +194,9 @@ class WebhookTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("merged", self.tg.edited[0][1].lower())
 
     async def test_pr_sync_without_prior_open_posts_fresh(self):
-        await self.hook.handle(make_request("pull_request", fixtures.pull_request(action="synchronized", number=99), delivery="s99"))
+        await self.hook.handle(
+            make_request("pull_request", fixtures.pull_request(action="synchronized", number=99), delivery="s99")
+        )
         await self.tg.run_jobs()
         self.assertEqual(len(self.tg.sent), 1)
         self.assertEqual(self.tg.edited, [])
@@ -223,8 +231,8 @@ class WebhookTests(unittest.IsolatedAsyncioTestCase):
         push = fixtures.push(commits=[fixtures.commit("Merge pull request #12 from eKisNonos/vault")])
         await self.hook.handle(make_request("push", push, delivery="merge12b"))
         await self.tg.run_jobs()
-        self.assertEqual(self.tg.sent, [])          # no new message
-        self.assertEqual(len(self.tg.edited), 1)    # edited in place
+        self.assertEqual(self.tg.sent, [])  # no new message
+        self.assertEqual(len(self.tg.edited), 1)  # edited in place
         self.assertEqual(self.tg.edited[0][0], 777)
         self.assertIn("merged", self.tg.edited[0][1].lower())
 
@@ -239,10 +247,12 @@ class WebhookTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_two_merges_in_one_push_both_announced(self):
         self.forge.pulls = {12: merged_pr_json(12), 13: merged_pr_json(13, title="Second")}
-        push = fixtures.push(commits=[
-            fixtures.commit("Merge pull request #12 from a/b"),
-            fixtures.commit("Merge pull request #13 from c/d"),
-        ])
+        push = fixtures.push(
+            commits=[
+                fixtures.commit("Merge pull request #12 from a/b"),
+                fixtures.commit("Merge pull request #13 from c/d"),
+            ]
+        )
         await self.hook.handle(make_request("push", push, delivery="merge2"))
         await self.tg.run_jobs()
         self.assertEqual(len(self.tg.sent), 2)

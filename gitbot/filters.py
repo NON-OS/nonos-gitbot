@@ -1,6 +1,7 @@
 """Noise rules. The kernel alone has hundreds of branches, so without these
 the group becomes a firehose. Each function returns a decision plus a short
 reason for the debug log."""
+
 from __future__ import annotations
 
 from .models import PullRequest, Push, Release
@@ -21,8 +22,12 @@ def decide_push(push: Push) -> tuple[str, str]:
         return SKIP, "private repository"
     if push.is_tag:
         return (POST, "tag created") if not push.is_deleted_branch else (SKIP, "tag deleted")
-    if (push.is_new_branch and not push.is_deleted_branch
-            and push.branch == push.repo.default_branch and (push.commits or push.total_commits)):
+    if (
+        push.is_new_branch
+        and not push.is_deleted_branch
+        and push.branch == push.repo.default_branch
+        and (push.commits or push.total_commits)
+    ):
         return REPO, "new repository"
     if push.is_new_branch or push.is_deleted_branch:
         return SKIP, "branch create or delete"

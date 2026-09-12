@@ -4,6 +4,7 @@ Verifies the HMAC over the raw request body before parsing anything, drops
 duplicate and unsigned deliveries, answers fast, and hands verified events
 to the handler. Payloads are never logged; only the delivery id is.
 """
+
 from __future__ import annotations
 
 import hashlib

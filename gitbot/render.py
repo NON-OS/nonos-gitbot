@@ -1,5 +1,6 @@
 """Message shapes. Plain and scannable, the same voice as the site. Every
 dynamic value is HTML-escaped; only the fixed markup is raw."""
+
 from __future__ import annotations
 
 import html
@@ -36,11 +37,13 @@ def render_push(push: Push, max_commits: int, summary_chars: int) -> str:
     if push.is_tag:
         head = f"<b>{_esc(push.repo.full_name)}</b> · tag {_esc(push.tag_name)}"
         link = f"{push.repo.html_url}/releases/tag/{html.escape(push.tag_name, quote=True)}"
-        return f"{head}\nTag created\n<a href=\"{link}\">View the tag</a>"
+        return f'{head}\nTag created\n<a href="{link}">View the tag</a>'
 
     n = push.total_commits or len(push.commits)
     plural = "commit" if n == 1 else "commits"
-    head = f"<b>{_esc(push.repo.full_name)}</b> · {_esc(push.branch)}\n{n} {plural} by {_esc(_author_label(push.commits))}"
+    head = (
+        f"<b>{_esc(push.repo.full_name)}</b> · {_esc(push.branch)}\n{n} {plural} by {_esc(_author_label(push.commits))}"
+    )
     lines = [head, ""]
     for c in push.commits[:max_commits]:
         lines.append(f"· {_esc(first_line(c.message, summary_chars))}")
@@ -48,7 +51,7 @@ def render_push(push: Push, max_commits: int, summary_chars: int) -> str:
     if hidden > 0:
         lines.append(f"· and {hidden} more")
     if push.compare_url:
-        lines.append(f"<a href=\"{push.compare_url}\">View the diff</a>")
+        lines.append(f'<a href="{push.compare_url}">View the diff</a>')
     return "\n".join(lines)
 
 
@@ -57,7 +60,7 @@ def render_repo_new(push: Push) -> str:
     plural = "commit" if n == 1 else "commits"
     head = f"<b>New repository</b> · {_esc(push.repo.full_name)}"
     meta = f"{n} {plural} by {_esc(_author_label(push.commits))} on {_esc(push.branch)}"
-    return f"{head}\n{meta}\n<a href=\"{push.repo.html_url}\">{_esc(push.repo.html_url)}</a>"
+    return f'{head}\n{meta}\n<a href="{push.repo.html_url}">{_esc(push.repo.html_url)}</a>'
 
 
 def _pr_headline(pr: PullRequest) -> str:
@@ -80,7 +83,7 @@ def render_pull_request(pr: PullRequest, author: str) -> str:
         meta += f" · {_esc(pr.base_ref)}"
     if pr.gh_number:
         meta += f" (GitHub #{_esc(pr.gh_number)})"
-    return f"{head}\n{title}\n{meta}\n<a href=\"{pr.url}\">{_esc(pr.url)}</a>"
+    return f'{head}\n{title}\n{meta}\n<a href="{pr.url}">{_esc(pr.url)}</a>'
 
 
 def _fmt_size(n: int) -> str:
@@ -104,6 +107,6 @@ def render_release(release: Release, max_files: int = 8) -> str:
     if hidden > 0:
         lines.append(f"· and {hidden} more")
     if checksums:
-        lines.append(f"<a href=\"{release.url}\">🔒 {_esc(checksums[0])}</a>")
-    lines.append(f"<a href=\"{release.url}\">{_esc(release.url)}</a>")
+        lines.append(f'<a href="{release.url}">🔒 {_esc(checksums[0])}</a>')
+    lines.append(f'<a href="{release.url}">{_esc(release.url)}</a>')
     return "\n".join(lines)

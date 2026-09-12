@@ -1,5 +1,6 @@
 """Environment configuration, validated at start so a bad deployment fails
 immediately instead of at the first webhook."""
+
 from __future__ import annotations
 
 import os

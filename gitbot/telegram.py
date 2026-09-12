@@ -8,6 +8,7 @@ handler answers Forgejo fast and drops jobs here; one worker drains them,
 spacing sends so a burst never trips the rate limit, and honouring the retry
 delay on 429. The bot token never reaches the log output.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -165,8 +166,9 @@ class Telegram:
                 assert isinstance(photo, Path)
                 media = {"type": "photo", "media": "attach://banner", "caption": caption, "parse_mode": "HTML"}
                 fields = {str(k): str(v) for k, v in self._base_params(with_thread=False).items()}
-                fields.update(message_id=str(message_id), media=json.dumps(media),
-                              banner=(photo.read_bytes(), photo.name))
+                fields.update(
+                    message_id=str(message_id), media=json.dumps(media), banner=(photo.read_bytes(), photo.name)
+                )
                 result = await self._send("editMessageMedia", form=aiohttp.FormData(), params=fields)
         except TelegramError as exc:
             if "not modified" in exc.description.lower():

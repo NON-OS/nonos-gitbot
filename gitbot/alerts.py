@@ -1,6 +1,7 @@
 """Send a warning to a private admin chat when something keeps failing, at
 most once an hour per fault. Off unless an admin chat is configured. The
 admin chat is separate from the group the bot posts to."""
+
 from __future__ import annotations
 
 import logging

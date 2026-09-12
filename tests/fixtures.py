@@ -10,11 +10,21 @@ REPO = {
 ZERO = "0" * 40
 
 
-def push(ref="refs/heads/main", commits=None, pusher="nonos-sync", total=None, before="a" * 40, after="b" * 40, repo=None):
-    commits = commits if commits is not None else [
-        {"id": "c1" + "0" * 38, "message": "Directory records as one layout\n\nbody", "url": "https://git.nonos.software/x/1",
-         "author": {"name": "eK", "username": "eKisNonos"}},
-    ]
+def push(
+    ref="refs/heads/main", commits=None, pusher="nonos-sync", total=None, before="a" * 40, after="b" * 40, repo=None
+):
+    commits = (
+        commits
+        if commits is not None
+        else [
+            {
+                "id": "c1" + "0" * 38,
+                "message": "Directory records as one layout\n\nbody",
+                "url": "https://git.nonos.software/x/1",
+                "author": {"name": "eK", "username": "eKisNonos"},
+            },
+        ]
+    )
     return {
         "ref": ref,
         "before": before,
@@ -28,13 +38,26 @@ def push(ref="refs/heads/main", commits=None, pusher="nonos-sync", total=None, b
 
 
 def commit(msg, login="eKisNonos", name="eK"):
-    return {"id": "0" * 40, "message": msg, "url": "https://git.nonos.software/x", "author": {"name": name, "username": login}}
+    return {
+        "id": "0" * 40,
+        "message": msg,
+        "url": "https://git.nonos.software/x",
+        "author": {"name": name, "username": login},
+    }
 
 
-def pull_request(action="opened", number=12, title="A vault the wallet keeps",
-                 merged=False, state="open", head_label="eKisNonos/nonos-micro-kernel:gh-485",
-                 body="Some description.\nOpened on GitHub by eKisNonos as pull request 485.",
-                 opener="nonos-sync", base_ref="main", repo=None):
+def pull_request(
+    action="opened",
+    number=12,
+    title="A vault the wallet keeps",
+    merged=False,
+    state="open",
+    head_label="eKisNonos/nonos-micro-kernel:gh-485",
+    body="Some description.\nOpened on GitHub by eKisNonos as pull request 485.",
+    opener="nonos-sync",
+    base_ref="main",
+    repo=None,
+):
     return {
         "action": action,
         "number": number,
