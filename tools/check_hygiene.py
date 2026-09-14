@@ -28,11 +28,19 @@ TEXT_SUFFIXES = {".py", ".md", ".yml", ".yaml", ".toml", ".txt", ".cfg", ".servi
 
 
 def tracked_files() -> list[Path]:
+    # Tracked plus untracked-not-ignored, so a new file is caught before it is
+    # committed, not only after. Deduplicated, order preserved.
     try:
-        out = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True)
-        paths = [ROOT / line for line in out.stdout.splitlines() if line]
-        if paths:
-            return paths
+        out = subprocess.run(
+            ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
+            cwd=ROOT, capture_output=True, text=True, check=True,
+        )
+        seen: dict[str, Path] = {}
+        for line in out.stdout.splitlines():
+            if line:
+                seen.setdefault(line, ROOT / line)
+        if seen:
+            return list(seen.values())
     except (OSError, subprocess.CalledProcessError):
         pass
     return [p for p in ROOT.rglob("*") if not SKIP_DIRS & set(p.parts)]
