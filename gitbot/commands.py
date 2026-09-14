@@ -24,10 +24,10 @@ MAX_ROWS = 15
 
 HELP = (
     "<b>git.nonos.software</b>\n"
-    "/prs [repo] — open pull requests\n"
-    "/latest &lt;repo&gt; — recent commits on the default branch\n"
-    "/repo &lt;repo&gt; — repository summary\n"
-    "/status — bot health"
+    "/prs [repo] - open pull requests\n"
+    "/latest &lt;repo&gt; - recent commits on the default branch\n"
+    "/repo &lt;repo&gt; - repository summary\n"
+    "/status - bot health"
 )
 
 
