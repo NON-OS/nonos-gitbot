@@ -49,6 +49,7 @@ cp .env.example .env
 | `BATCH_SECONDS` | no | `60` | coalesce commit pushes per branch for this many seconds, 0 for immediate |
 | `ADMIN_CHAT_ID` | no | `0` | private chat for failure alerts, 0 disables |
 | `PR_POLL_SECONDS` | no | `90` | how often to poll the forge for pull request changes, 0 disables |
+| `COMMANDS_ENABLED` | no | `1` | answer read-only group commands, needs group privacy off |
 | `LOG_LEVEL` | no | `INFO` | DEBUG, INFO, WARNING or ERROR |
 
 Every value is validated at start. A malformed token, a non-numeric chat id

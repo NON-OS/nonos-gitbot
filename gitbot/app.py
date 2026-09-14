@@ -5,12 +5,14 @@ from __future__ import annotations
 import asyncio
 import logging
 import signal
+import time
 
 import aiohttp
 from aiohttp import web
 
 from .alerts import Alerter
 from .authors import SyncSummary
+from .commands import CommandLoop
 from .config import Config
 from .forge import ForgeClient
 from .handler import Handler
@@ -61,10 +63,13 @@ async def run() -> None:
 
         poller = PRPoller(cfg, forge, state, handler.announce_pr)
         poller_task = asyncio.create_task(poller.run())
+        commands = CommandLoop(cfg, tg, forge, time.monotonic())
+        commands_task = asyncio.create_task(commands.run())
         try:
             await stop.wait()
         finally:
             poller_task.cancel()
+            commands_task.cancel()
             handler.batcher.flush_all()
             await runner.cleanup()
             state.save(cfg.state_file)

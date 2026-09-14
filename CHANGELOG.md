@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Read-only group commands answered from the forge API: /prs, /latest, /repo,
+  /status, /help. Rate limited, answered only in the configured chat or in
+  private. Needs group privacy off so the bot can see the commands.
+
 - Poll the forge for pull request changes. The forge does not fire
   pull_request webhooks for its sync-driven activity, so the bot only ever saw
   main pushes. It now reads the forge PR API on an interval (PR_POLL_SECONDS,

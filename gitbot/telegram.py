@@ -136,6 +136,33 @@ class Telegram:
         result = await self._send("sendMessage", params=params)
         return int(result["message_id"])
 
+    async def reply(self, chat_id: int, text: str) -> int:
+        # HTML reply into a specific chat, used by the command loop.
+        params = {"chat_id": chat_id, "parse_mode": "HTML", "text": text, "link_preview_options": {"is_disabled": True}}
+        result = await self._send("sendMessage", params=params)
+        return int(result["message_id"])
+
+    async def get_updates(self, offset: int, timeout: int = 25) -> list[dict]:
+        assert self._session, "use `async with Telegram(...)`"
+        try:
+            async with self._session.post(
+                self.base + "getUpdates",
+                json={"offset": offset, "timeout": timeout, "allowed_updates": ["message"]},
+                timeout=aiohttp.ClientTimeout(total=timeout + 15),
+            ) as resp:
+                body = await resp.json(content_type=None)
+            return body.get("result", []) if body.get("ok") else []
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
+            log.warning("getUpdates: %s", self._redact(str(exc)))
+            await asyncio.sleep(3)
+            return []
+
+    async def delete_webhook(self) -> None:
+        try:
+            await self._send("deleteWebhook", params={"drop_pending_updates": False})
+        except TelegramError as exc:
+            log.debug("deleteWebhook: %s", exc)
+
     async def send_photo(self, photo: Path | str, caption: str) -> int:
         caption = fit_caption(caption)
         key = str(photo) if isinstance(photo, Path) else None

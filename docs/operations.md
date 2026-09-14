@@ -50,6 +50,13 @@ posts when a pull request opens, gets new commits, merges or closes, keeping one
 message per pull request that is edited in place. The first run after a fresh
 state learns the current open pull requests without posting them.
 
+## Commands
+
+Anyone in the group can ask, read only, rate limited: /prs [repo] lists open
+pull requests, /latest <repo> shows recent commits on the default branch,
+/repo <repo> summarises a repository, /status reports bot health, /help lists
+the commands. The bot needs group privacy disabled in BotFather to see them.
+
 ## Banners
 
 Every posted event carries a banner rendered from the site's design, with

@@ -59,6 +59,32 @@ class ForgeClient:
         data = await self._get(f"/repos/{repo_full_name}/pulls?state=all&sort=recentupdate&limit={limit}")
         return data if isinstance(data, list) else []
 
+    async def open_pulls(self, repo_full_name: str, limit: int = 20) -> list[dict]:
+        data = await self._get(f"/repos/{repo_full_name}/pulls?state=open&sort=recentupdate&limit={limit}")
+        return data if isinstance(data, list) else []
+
+    async def commits(self, repo_full_name: str, limit: int = 5) -> list[dict]:
+        data = await self._get(f"/repos/{repo_full_name}/commits?limit={limit}&stat=false")
+        return data if isinstance(data, list) else []
+
+    async def repo(self, repo_full_name: str) -> dict | None:
+        return await self._get(f"/repos/{repo_full_name}")
+
+    async def releases(self, repo_full_name: str, limit: int = 1) -> list[dict]:
+        data = await self._get(f"/repos/{repo_full_name}/releases?limit={limit}")
+        return data if isinstance(data, list) else []
+
+    async def resolve_repo(self, org: str, name: str) -> str | None:
+        """Match a user-typed repo name against the org's repos: exact full
+        name, exact short name, or a unique suffix match."""
+        wanted = name.strip().lower().removeprefix(f"{org.lower()}/")
+        repos = await self.org_repos(org)
+        for full in repos:
+            if full.split("/")[-1].lower() == wanted or full.lower() == name.strip().lower():
+                return full
+        matches = [f for f in repos if wanted in f.split("/")[-1].lower()]
+        return matches[0] if len(matches) == 1 else None
+
     async def org_repos(self, org: str, ttl: float = 3600.0) -> list[str]:
         if self._repos and time.monotonic() - self._repos_at < ttl:
             return self._repos
