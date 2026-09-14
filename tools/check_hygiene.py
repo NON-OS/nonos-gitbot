@@ -33,7 +33,10 @@ def tracked_files() -> list[Path]:
     try:
         out = subprocess.run(
             ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
-            cwd=ROOT, capture_output=True, text=True, check=True,
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
         )
         seen: dict[str, Path] = {}
         for line in out.stdout.splitlines():
