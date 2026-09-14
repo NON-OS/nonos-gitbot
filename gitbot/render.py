@@ -83,6 +83,8 @@ def render_pull_request(pr: PullRequest, author: str) -> str:
         meta += f" · {_esc(pr.base_ref)}"
     if pr.gh_number:
         meta += f" (GitHub #{_esc(pr.gh_number)})"
+    if pr.head_sha:
+        meta += f" · {_esc(pr.head_sha[:7])}"
     return f'{head}\n{title}\n{meta}\n<a href="{pr.url}">{_esc(pr.url)}</a>'
 
 

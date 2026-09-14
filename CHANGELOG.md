@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Poll the forge for pull request changes. The forge does not fire
+  pull_request webhooks for its sync-driven activity, so the bot only ever saw
+  main pushes. It now reads the forge PR API on an interval (PR_POLL_SECONDS,
+  default 90) and announces a pull request when it opens, gets new commits,
+  merges or closes, editing the one message per PR. The first run learns the
+  current state without posting so it does not flood the group.
+
 - Read a merge commit as a merged pull request. A merge done on GitHub reaches
   the forge as a push, not a pull_request event, so the merge is recognised
   from the commit subject, confirmed against the forge API, and announced as a

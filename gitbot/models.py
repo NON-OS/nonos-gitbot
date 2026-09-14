@@ -70,10 +70,13 @@ class PullRequest:
     head_label: str
     body: str
     opener: str
+    head_sha: str = ""
+    changed_files: int = 0
+    draft: bool = False
 
     @property
     def is_draft(self) -> bool:
-        return self.title.upper().startswith(("WIP:", "[WIP]", "DRAFT:"))
+        return self.draft or self.title.upper().startswith(("WIP:", "[WIP]", "DRAFT:"))
 
     @property
     def gh_number(self) -> str:

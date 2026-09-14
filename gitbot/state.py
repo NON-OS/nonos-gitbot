@@ -15,12 +15,15 @@ log = logging.getLogger("gitbot.state")
 
 MAX_DELIVERIES = 5000
 MAX_PR_MESSAGES = 2000
+MAX_PR_STATE = 2000
 
 
 class State:
     def __init__(self) -> None:
         self.deliveries: OrderedDict[str, bool] = OrderedDict()
         self.pr_messages: OrderedDict[str, int] = OrderedDict()
+        # repo#number -> "state:merged:head_sha", so the poller sees what changed
+        self.pr_state: OrderedDict[str, str] = OrderedDict()
 
     @staticmethod
     def pr_key(repo_full_name: str, number: int) -> str:
@@ -43,12 +46,15 @@ class State:
                 st.pr_messages[str(key)] = int(mid)
             except (TypeError, ValueError):
                 continue
+        for key, sig in dict(raw.get("pr_state", {})).items():
+            st.pr_state[str(key)] = str(sig)
         return st
 
     def save(self, path: Path) -> None:
         data: dict[str, Any] = {
             "deliveries": list(self.deliveries.keys())[-MAX_DELIVERIES:],
             "pr_messages": dict(list(self.pr_messages.items())[-MAX_PR_MESSAGES:]),
+            "pr_state": dict(list(self.pr_state.items())[-MAX_PR_STATE:]),
         }
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(".tmp")
@@ -77,3 +83,12 @@ class State:
 
     def pr_message(self, repo_full_name: str, number: int) -> int | None:
         return self.pr_messages.get(self.pr_key(repo_full_name, number))
+
+    def pr_signature(self, key: str) -> str | None:
+        return self.pr_state.get(key)
+
+    def set_pr_signature(self, key: str, signature: str) -> None:
+        self.pr_state[key] = signature
+        self.pr_state.move_to_end(key)
+        while len(self.pr_state) > MAX_PR_STATE:
+            self.pr_state.popitem(last=False)

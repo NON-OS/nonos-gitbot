@@ -14,6 +14,7 @@ from .authors import SyncSummary
 from .config import Config
 from .forge import ForgeClient
 from .handler import Handler
+from .poller import PRPoller
 from .state import State
 from .telegram import Telegram
 from .webhook import build_app
@@ -57,9 +58,13 @@ async def run() -> None:
         site = web.TCPSite(runner, cfg.listen_host, cfg.listen_port)
         await site.start()
         log.info("listening on http://%s:%d%s", cfg.listen_host, cfg.listen_port, cfg.webhook_path)
+
+        poller = PRPoller(cfg, forge, state, handler.announce_pr)
+        poller_task = asyncio.create_task(poller.run())
         try:
             await stop.wait()
         finally:
+            poller_task.cancel()
             handler.batcher.flush_all()
             await runner.cleanup()
             state.save(cfg.state_file)

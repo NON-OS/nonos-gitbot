@@ -41,6 +41,15 @@ count.
   is there for the day one is not.
 - Duplicate deliveries. Forgejo retries, and admins can redeliver by hand.
 
+## Pull requests
+
+The forge is fed from GitHub by a sync account and does not fire pull_request
+webhooks for that activity, so the bot does not learn about pull requests from
+the webhook stream. Instead it polls the forge PR API every PR_POLL_SECONDS and
+posts when a pull request opens, gets new commits, merges or closes, keeping one
+message per pull request that is edited in place. The first run after a fresh
+state learns the current open pull requests without posting them.
+
 ## Banners
 
 Every posted event carries a banner rendered from the site's design, with

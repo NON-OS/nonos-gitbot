@@ -88,7 +88,7 @@ class Handler:
             if not data or not data.get("merged"):
                 continue
             merged_any = True
-            await self._post_merged_pr(pull_from_json(data, push.repo))
+            await self.announce_pr(pull_from_json(data, push.repo))
         if not merged_any:
             text = render.render_push(push, self.cfg.max_commits, self.cfg.summary_chars)
             banner = self._banner(banners.COMMITS)
@@ -97,7 +97,9 @@ class Handler:
             else:
                 await self.tg.send_text(text)
 
-    async def _post_merged_pr(self, pr: models.PullRequest) -> None:
+    async def announce_pr(self, pr: models.PullRequest) -> None:
+        """Post a pull request once, then edit that message in place as it
+        updates, merges or closes. Shared by the merge path and the poller."""
         author = await self.summary.author_for(pr)
         text = render.render_pull_request(pr, author)
         banner = self._banner(banners.for_pull_request(pr))

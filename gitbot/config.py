@@ -92,6 +92,7 @@ class Config:
     skip_drafts: bool = True
     batch_seconds: float = 60.0
     admin_chat_id: int = 0
+    pr_poll_seconds: float = 90.0
     log_level: str = "INFO"
 
     @classmethod
@@ -126,5 +127,6 @@ class Config:
             skip_drafts=_env("SKIP_DRAFTS", "1") not in ("0", "false", "no"),
             batch_seconds=_env_float("BATCH_SECONDS", 60.0, 0.0, 600.0),
             admin_chat_id=_env_int("ADMIN_CHAT_ID", 0, -(2**63), 2**63 - 1),
+            pr_poll_seconds=_env_float("PR_POLL_SECONDS", 90.0, 0.0, 3600.0),
             log_level=level,
         )
